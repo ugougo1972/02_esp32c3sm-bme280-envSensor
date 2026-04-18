@@ -5,11 +5,15 @@
 本ファイルは、携帯型環境センサーロガー初号機のシステム全体像を整理するための概要資料である。  
 初号機では、**頭痛発生と環境要因の相関記録**を目的とし、まずは **安定した周期記録の成立** を最優先とする。
 
+---
+
 ## システム概要
 
 本システムは、携帯型の環境センサーロガーであり、一定時間ごとに環境データを取得し、microSDカードへ CSV 形式で記録する装置である。  
 必要に応じて OLED 表示および Rotary Encoder による操作を行う。  
 また、環境データだけでは分からない補助情報として、`context_code` および `head_code` を扱える構成とする。
+
+---
 
 ## システム目的
 
@@ -20,6 +24,8 @@
 3. `context_code` により行動状態を補助記録する
 4. `head_code` により頭痛状態を補助記録する
 5. 環境要因と体調変化の相関を後から解析できるようにする
+
+---
 
 ## 取得データ
 
@@ -36,7 +42,7 @@
 | D-7 | UVセンサ値 | `uvs` | LTR390 | UVS raw/count |
 | D-8 | 行動状態 | `context_code` | 手動入力 | `04_ctx.md` 準拠 |
 | D-9 | 頭痛状態 | `head_code` | 手動入力 | `05_head.md` 準拠 |
-| D-10 | 電池電圧 | `vbat` | ADC | 分圧回路追加で実装予定 |
+| D-10 | 電池電圧 | `vbat` | ADC | 分圧回路経由・実装予定 |
 
 ### 取得データに関する方針
 
@@ -46,13 +52,15 @@
 - `vbat` は後段追加項目であり、分圧回路と ADC 読み出しで実装する
 - 推測値を自動設定しない
 
+---
+
 ## システム構成
 
 ### ハードウェア構成
 
 | 区分 | 部品 | 備考 |
 |------|------|------|
-| MCU | Seeed Studio XIAO ESP32S3 Plus | 最終構成候補 |
+| MCU | Seeed Studio XIAO ESP32S3 Plus | 最終構成 |
 | 評価用MCU | ESP32-WROOM系開発ボード | Bring-up用 |
 | 温湿度・気圧 | BME280 | I2C |
 | 照度・UV | LTR390 | I2C |
@@ -60,8 +68,9 @@
 | 表示 | OLED SSD1306 | I2C |
 | 入力 | RGB LED付きスイッチ付きロータリーエンコーダ | GPIO |
 | 記録 | microSD | SPI |
-| 電源 | LiPo + TP4056 + XC9306 | 電源基板候補 |
-| 充電 | TP4056 | USB充電用 |
+| 充電 | TP4056系充電モジュール | USB-C入力 |
+| 電源IC | AE-TPS63802（昇降圧スイッチング） | 3.3V出力・EN端子付き |
+| 電池 | LiPo | 容量は運用で変更可能 |
 
 ### ソフトウェア構成
 
@@ -72,9 +81,78 @@
 | 時刻取得 | RTC |
 | 表示 | OLED |
 | 入力 | Rotary Encoder |
-| 省電力 | Deep Sleep |
+| 省電力 | Deep Sleep + TPS63802 EN制御 |
 | 通信 | USB Serial |
 | 電池電圧取得 | ADC + 分圧回路（実装予定） |
+
+---
+
+## 電源アーキテクチャ（更新済み）
+
+### 電源経路
+
+```
+LiPo
+  │
+  └─ JST（2pin）  AWG24
+        │
+     TP4056（充電・保護）
+        │  AWG28
+     AE-TPS63802（昇降圧・3.3V出力）
+        │
+     端子台（4ライン）
+        │
+     メイン基板
+```
+
+### 端子台ライン構成
+
+| ライン | 内容 | 接続先 |
+|--------|------|--------|
+| 3.3V | TPS63802 VOUT出力 | メイン基板 3.3V |
+| GND | GNDバス | メイン基板 GND |
+| VBAT_RAW | TP4056 OUT+直接引き出し | メイン基板 ADC分圧回路 |
+| EN | TPS63802 EN端子 | XIAO GPIO（Deep Sleep制御） |
+
+### 電源基板コンデンサ構成
+
+| 部品 | 容量 | 種別 | 接続 |
+|------|------|------|------|
+| C1 | 0.1uF | MLCC（極性なし） | TP4056 OUT+ ↔ OUT- 間 |
+| C2 | 47uF | 電解（極性あり・長足→VOUT側） | TPS63802 VOUT ↔ GND 間 |
+| C3 | 0.1uF | MLCC（極性なし） | TPS63802 VOUT ↔ GND 間（C2と並列） |
+
+### 基板分割方針
+
+- **電源基板**: LiPo / JST / TP4056 / AE-TPS63802 / C1 / C2 / C3 / 端子台
+- **メイン基板**: XIAO / センサ類 / microSD / UI / 分圧回路（R1/R2）
+- LiPo と TP4056 は JST コネクタ接続
+- 電源基板とメイン基板は端子台経由ケーブル接続
+
+### TPS63802 EN端子の活用
+
+- TPS63802の4P ENピンをXIAO GPIOで制御する
+- HIGH：通常動作（3.3V供給）
+- LOW：Deep Sleep時にTPS63802をシャットダウン → センサ類への3.3V供給を完全遮断
+- XC9306にはなかった機能であり、Deep Sleep時の消費電力を大幅に削減できる
+
+### battery voltage monitor 方針
+
+- 測定対象は `TP4056 OUT+ / OUT-` とする
+- **分圧回路はメイン基板側へ配置する**（電子回路設計的に正しい配置）
+- 理由：分圧中点（高インピーダンス）はADCピンの近くに置くほどノイズの影響を受けにくいため
+- 初期値は `100kΩ + 100kΩ` の 1:1 分圧を第一候補とする
+- 必要に応じて ADC 中点-GND 間へ 0.1µF を追加できる構成とする
+
+### 線材
+
+| 区間 | 線材 |
+|------|------|
+| JST ↔ TP4056 B+/B- | AWG24（直付け） |
+| その他全配線 | AWG28 |
+| GNDバス・3.3Vライン | スズメッキ線 |
+
+---
 
 ## 動作モード
 
@@ -82,9 +160,12 @@
 
 | モード | 内容 | 用途 |
 |--------|------|------|
-| UI試験モード | 画面表示・入力確認中心 | 画面遷移、操作確認 |
-| periodic logger | 一定周期で継続保存 | USB給電または LiPo 給電でのログ確認 |
+| UI試験モード | 画面表示・入力確認中心 | 画面遷移・操作確認 |
+| periodic logger | 一定周期で継続保存 | USB給電またはLiPo給電でのログ確認 |
 | Deep Sleep logger | 起床ごと保存して再Sleep | 低消費電力運用の基準版 |
+| Battery monitor試験 | 分圧回路・ADC確認 | vbat取得確認 |
+
+---
 
 ## 基本動作シーケンス
 
@@ -93,25 +174,28 @@
 1. Deep Sleep から起床
 2. 起床要因を確認
 3. RTC / BME280 / LTR390 / microSD を再初期化
-4. RTCから現在時刻取得
+4. RTC から現在時刻取得
 5. 時刻妥当性確認、必要なら復旧
 6. BME280 測定
 7. LTR390 測定
 8. `context_code` / `head_code` / `vbat` を含むログ行を生成
 9. microSD へ追記保存
 10. 必要に応じて OLED 表示
-11. 次回起床条件を設定
-12. Deep Sleep に移行
+11. TPS63802 EN → LOW（センサ類への電源遮断）
+12. 次回起床条件を設定
+13. Deep Sleep に移行
 
 ### periodic logger 基本シーケンス
 
 1. 初期化
-2. RTC取得
+2. RTC 取得
 3. センサ測定
-4. CSV生成
-5. microSD追記
+4. CSV 生成
+5. microSD 追記
 6. 必要に応じ表示更新
 7. 次周期まで待機
+
+---
 
 ## ログデータ形式
 
@@ -143,13 +227,7 @@ date,time,temp_c,hum_pct,press_hpa,als,uvs,context_code,head_code,vbat
 2026-04-05,15:11:11,22.52,62.38,1006.26,565,0,1,1,3.98
 ```
 
-### ログ形式に関する注意
-
-- 開発途中では簡略列のログを許容する
-- 運用版では列順と列名を固定する
-- `context` ではなく **`context_code`**
-- `head` ではなく **`head_code`**
-- `lux` / `uv` ではなく、現時点では **`als` / `uvs`** を優先する
+---
 
 ## 画面構成
 
@@ -168,6 +246,8 @@ date,time,temp_c,hum_pct,press_hpa,als,uvs,context_code,head_code,vbat
 - `context_code` / `head_code` の入力UIは後段で確定する
 - 電池アイコンは `vbat` 実装後に統合する
 
+---
+
 ## 省電力方針
 
 | 項目 | 方針 |
@@ -175,10 +255,13 @@ date,time,temp_c,hum_pct,press_hpa,als,uvs,context_code,head_code,vbat
 | 通常運用 | Deep Sleep を基本とする |
 | 基本周期 | 60秒を基準とする |
 | 試験周期 | 5秒 / 30秒 / 60秒を許容 |
-| OLED | 必要時のみON |
+| OLED | 必要時のみ ON |
 | Wi-Fi | 使用しない |
 | Bluetooth | 使用しない |
+| センサ電源 | Deep Sleep時にTPS63802 EN→LOWで遮断 |
 | 電流測定 | 完成まで実施しない |
+
+---
 
 ## システム成立条件
 
@@ -192,8 +275,11 @@ date,time,temp_c,hum_pct,press_hpa,als,uvs,context_code,head_code,vbat
 | 4 | Deep Sleep成立 | 周期起床で継続記録できること |
 | 5 | UI成立 | 画面遷移と基本表示ができること |
 | 6 | 状態コード反映 | `context_code` / `head_code` を扱えること |
-| 7 | 電源成立 | LiPo → TP4056 → XC9306 → XIAO が安定動作すること |
-| 8 | 電池監視 | `vbat` は後段追加 |
+| 7 | 電源成立 | LiPo → TP4056 → TPS63802 → XIAO が安定動作すること |
+| 8 | EN制御成立 | Deep Sleep時にTPS63802をシャットダウンできること |
+| 9 | 電池監視 | `vbat` は後段追加 |
+
+---
 
 ## 本システムの設計方針
 
@@ -209,42 +295,15 @@ date,time,temp_c,hum_pct,press_hpa,als,uvs,context_code,head_code,vbat
 | S-8 | 初号機は評価機 |
 | S-9 | `context_code` / `head_code` は補助情報として扱う |
 | S-10 | 電流評価は完成後に行う |
-| S-11 | 電源回りは別基板化を第一候補とする |
+| S-11 | 電源回りは別基板化（電源基板 / メイン基板の2基板構成） |
+| S-12 | TPS63802 EN端子でDeep Sleep時の電源を完全遮断する |
 
-## 電源アーキテクチャ方針
-
-### 初号機の電源構成
-
-```text
-Li-Po
-  ↓
-TP4056
-  ↓
-XC9306
-  ↓
-3.3V
-  ↓
-XIAO ESP32S3 Plus / 各モジュール
-```
-
-### 基板分割方針
-
-- 電源基板: LiPo / TP4056 / XC9306
-- メイン基板: XIAO / センサ / microSD / UI / 分圧回路
-- Li-Po と TP4056 は JST コネクタ接続
-- 電源基板とメイン基板は端子台経由ケーブル接続
-
-### battery voltage monitor 方針
-
-- 測定対象は `TP4056 OUT+ / OUT-` とする
-- 分圧回路はメイン基板側へ配置する
-- 初期値は `100kΩ + 100kΩ` の 1:1 分圧を第一候補とする
-- 必要に応じて ADC 中点-GND 間へ 0.1µF を追加できる構成とする
+---
 
 ## 現時点で確認済みのシステム成立範囲
 
 - USB給電での統合動作
-- LiPo → TP4056 → XC9306 → XIAO の最小電源経路
+- LiPo → TP4056 → XC9306 → XIAO の最小電源経路（XC9306は現在TPS63802へ換装中）
 - LiPo駆動での Blink 動作
 - BME280 / LTR390 / OLED / DS3231 の統合動作
 - microSD 追記保存
@@ -253,22 +312,37 @@ XIAO ESP32S3 Plus / 各モジュール
 - VIEW / MENU / CLOCK / LOG / SLEEP の基本UI
 - RGB LED付きスイッチ付きロータリーエンコーダ基本動作
 - `context_code` / `head_code` 文書定義
+- TP4056単体試験合格
+- 電源基板レイアウト確定（72mm×47mm）
+- 電源基板配線図確定
+
+---
 
 ## 現時点で未確定の項目
 
+- TPS63802通電試験（実装作業中）
 - `vbat` 実装
+- TPS63802 EN端子用GPIOピン確定
 - `context_code` の最終入力方法
 - `head_code` の最終入力方法
-- 電源基板の固定方法
+- 電源基板の最終固定方法
 - 筐体内レイアウト
 - 長期運用時のログローテーション
 - 完成後の消費電流評価
+
+---
 
 ## ステータス
 
 - [ACTIVE] システム基本構成として有効
 - [ACTIVE] USB給電での統合動作確認済み
 - [ACTIVE] LiPo駆動での最小動作確認済み
-- [ACTIVE] `context_code` / `head_code` を含むシステム構成へ更新済み
+- [ACTIVE] 電源ICをXC9306からAE-TPS63802へ変更済み
+- [ACTIVE] 端子台を4ライン構成（3.3V / GND / VBAT_RAW / EN）に更新済み
+- [ACTIVE] 分圧回路はメイン基板側配置に方針確定
+- [ACTIVE] Deep Sleep時のTPS63802 ENシャットダウン方針追加
+- [IN PROGRESS] AE-TPS63802換装・電源基板実装中
 - [CHECK] 電池電圧測定未実装
+- [CHECK] TPS63802 EN端子用GPIOピン未確定
 - [CHECK] Deep Sleep電流未測定
+- [CHECK] DS3231主電源断後バックアップ保持の最終判定
