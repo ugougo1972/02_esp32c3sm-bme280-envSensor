@@ -63,10 +63,11 @@
 | MCU | Seeed Studio XIAO ESP32S3 Plus | 最終構成 |
 | 評価用MCU | ESP32-WROOM系開発ボード | Bring-up用 |
 | 温湿度・気圧 | BME280 | I2C |
-| 照度・UV | LTR390 | I2C |
+| 照度・UV | LTR390 | I2C・ケース直付け |
 | RTC | DS3231 | I2C |
-| 表示 | OLED SSD1306 | I2C |
-| 入力 | RGB LED付きスイッチ付きロータリーエンコーダ | GPIO |
+| 表示 | OLED SSD1306 | I2C・ケース直付け |
+| 入力 | RGB LED付きスイッチ付きロータリーエンコーダ | GPIO・ケース直付け |
+| GPIO拡張 | MCP23017 | I2C・LED R/G/B制御用 |
 | 記録 | microSD | SPI |
 | 充電 | TP4056系充電モジュール | USB-C入力 |
 | 電源IC | AE-TPS63802（昇降圧スイッチング） | 3.3V出力・EN端子付き |
@@ -81,13 +82,14 @@
 | 時刻取得 | RTC |
 | 表示 | OLED |
 | 入力 | Rotary Encoder |
+| LED制御 | MCP23017経由（I2C） |
 | 省電力 | Deep Sleep + TPS63802 EN制御 |
 | 通信 | USB Serial |
 | 電池電圧取得 | ADC + 分圧回路（実装予定） |
 
 ---
 
-## 電源アーキテクチャ（更新済み）
+## 電源アーキテクチャ（確定）
 
 ### 電源経路
 
@@ -112,7 +114,7 @@ LiPo
 | 3.3V | TPS63802 VOUT出力 | メイン基板 3.3V |
 | GND | GNDバス | メイン基板 GND |
 | VBAT_RAW | TP4056 OUT+直接引き出し | メイン基板 ADC分圧回路 |
-| EN | TPS63802 EN端子 | XIAO GPIO（Deep Sleep制御） |
+| EN | TPS63802 EN端子 | XIAO D6(GPIO43)（Deep Sleep制御） |
 
 ### 電源基板コンデンサ構成
 
@@ -122,16 +124,17 @@ LiPo
 | C2 | 47uF | 電解（極性あり・長足→VOUT側） | TPS63802 VOUT ↔ GND 間 |
 | C3 | 0.1uF | MLCC（極性なし） | TPS63802 VOUT ↔ GND 間（C2と並列） |
 
-### 基板分割方針
+### 基板分割方針（確定）
 
-- **電源基板**: LiPo / JST / TP4056 / AE-TPS63802 / C1 / C2 / C3 / 端子台
-- **メイン基板**: XIAO / センサ類 / microSD / UI / 分圧回路（R1/R2）
+- **電源基板（72mm×47mm）**: LiPo / JST / TP4056 / AE-TPS63802 / C1 / C2 / C3 / 端子台
+- **メイン基板（95mm×72mm）**: XIAO / BME280 / DS3231 / microSD / MCP23017 / JST群 / 分圧回路
 - LiPo と TP4056 は JST コネクタ接続
 - 電源基板とメイン基板は端子台経由ケーブル接続
+- OLED / LTR390 / Encoder はケース直付け・AWG28ケーブルでメイン基板へ接続
 
 ### TPS63802 EN端子の活用
 
-- TPS63802の4P ENピンをXIAO GPIOで制御する
+- TPS63802の4P ENピンをXIAO D6(GPIO43)で制御する
 - HIGH：通常動作（3.3V供給）
 - LOW：Deep Sleep時にTPS63802をシャットダウン → センサ類への3.3V供給を完全遮断
 - XC9306にはなかった機能であり、Deep Sleep時の消費電力を大幅に削減できる
@@ -142,6 +145,7 @@ LiPo
 - **分圧回路はメイン基板側へ配置する**（電子回路設計的に正しい配置）
 - 理由：分圧中点（高インピーダンス）はADCピンの近くに置くほどノイズの影響を受けにくいため
 - 初期値は `100kΩ + 100kΩ` の 1:1 分圧を第一候補とする
+- ADC入力ピン：XIAO D7(GPIO44)
 - 必要に応じて ADC 中点-GND 間へ 0.1µF を追加できる構成とする
 
 ### 線材
@@ -151,6 +155,78 @@ LiPo
 | JST ↔ TP4056 B+/B- | AWG24（直付け） |
 | その他全配線 | AWG28 |
 | GNDバス・3.3Vライン | スズメッキ線 |
+
+---
+
+## 電源基板通電試験結果（PASS）
+
+| 試験項目 | 結果 |
+|---------|------|
+| 無負荷出力電圧 | 3.304V ✅ |
+| USB-C単独接続時出力電圧 | 3.304V ✅ |
+| LiPo単独接続時出力電圧 | 3.304V ✅ |
+| USB-C + LiPo同時接続時出力電圧 | 3.304V ✅ |
+| GND-3.3V間ショート確認 | ショートなし ✅ |
+| RAW-3.3V間ショート確認 | ショートなし ✅ |
+
+---
+
+## メイン基板 部品配置（確定）
+
+基板サイズ：95mm × 72mm（有効37穴 × 27穴）
+
+| 部品 | PINホール | FootPrint |
+|------|-----------|-----------|
+| XIAO | (1,1)～(7,1)＋(1,7)～(7,7) | (1,1)～(7,7) |
+| MCP23017 | (12,3)～(12,16)＋(15,3)～(15,16) | (12,3)～(15,16) |
+| DS3231 | (18,1)～(23,1)＋(19,15)～(22,15) | (17,1)～(24,15) |
+| BME280 | (18,16)～(23,16) | (18,16)～(23,18) |
+| microSD | (8,13)～(8,18) | (1,13)～(8,18) |
+| JST1(OLED 4P) | (9,1)～(9,4) | (8,1)～(10,4) |
+| JST2(LTR390 4P) | (9,5)～(9,8) | (8,5)～(10,8) |
+| JST3(Encoder 8P) | (10,18)～(17,18) | (10,17)～(17,18) |
+| 端子台(4P) | (13,1)～(16,1) | (13,1)～(16,2) |
+| 分圧回路 | (1,9)～(6,11) | (1,9)～(6,11) |
+
+---
+
+## GPIO割り当て（確定）
+
+| ピン | GPIO | 用途 |
+|------|------|------|
+| D0 | GPIO1 | Encoder A |
+| D1 | GPIO2 | Encoder B |
+| D2 | GPIO3 | microSD CS |
+| D3 | GPIO4 | Encoder SW |
+| D4 | GPIO5 | I2C SDA |
+| D5 | GPIO6 | I2C SCL |
+| D6 | GPIO43 | TPS63802 EN制御 |
+| D7 | GPIO44 | Battery monitor ADC（VBAT） |
+| D8 | GPIO7 | SPI SCK |
+| D9 | GPIO8 | SPI MISO |
+| D10 | GPIO9 | SPI MOSI |
+
+### MCP23017 GPIO割り当て（I2Cアドレス 0x20）
+
+| MCP23017ピン | 用途 |
+|-------------|------|
+| GPA0 | LED R（100Ω経由） |
+| GPA1 | LED G（100Ω経由） |
+| GPA2 | LED B（100Ω経由） |
+| GPA3～GPB7 | 未使用（将来拡張余地） |
+
+---
+
+## I2Cデバイス一覧
+
+| デバイス | I2Cアドレス | 接続方法 |
+|---------|-----------|---------|
+| BME280 | 0x76 | 基板直付け |
+| LTR390 | 0x53 | JST2経由・ケース直付け |
+| OLED SSD1306 | 0x3C | JST1経由・ケース直付け |
+| DS3231 | 0x68 | 基板直付け |
+| AT24C32 | 0x57 | DS3231モジュール同梱 |
+| MCP23017 | 0x20 | 基板直付け |
 
 ---
 
@@ -277,7 +353,8 @@ date,time,temp_c,hum_pct,press_hpa,als,uvs,context_code,head_code,vbat
 | 6 | 状態コード反映 | `context_code` / `head_code` を扱えること |
 | 7 | 電源成立 | LiPo → TP4056 → TPS63802 → XIAO が安定動作すること |
 | 8 | EN制御成立 | Deep Sleep時にTPS63802をシャットダウンできること |
-| 9 | 電池監視 | `vbat` は後段追加 |
+| 9 | LED制御成立 | MCP23017経由でRGB LEDを制御できること |
+| 10 | 電池監視 | `vbat` は後段追加 |
 
 ---
 
@@ -297,13 +374,15 @@ date,time,temp_c,hum_pct,press_hpa,als,uvs,context_code,head_code,vbat
 | S-10 | 電流評価は完成後に行う |
 | S-11 | 電源回りは別基板化（電源基板 / メイン基板の2基板構成） |
 | S-12 | TPS63802 EN端子でDeep Sleep時の電源を完全遮断する |
+| S-13 | XIAO裏面JTAGランドは使用しない（MCP23017でLED制御を代替） |
+| S-14 | 全配線は2.54mmピッチで統一する |
 
 ---
 
 ## 現時点で確認済みのシステム成立範囲
 
 - USB給電での統合動作
-- LiPo → TP4056 → XC9306 → XIAO の最小電源経路（XC9306は現在TPS63802へ換装中）
+- LiPo → TP4056 → AE-TPS63802 → XIAO の最小電源経路
 - LiPo駆動での Blink 動作
 - BME280 / LTR390 / OLED / DS3231 の統合動作
 - microSD 追記保存
@@ -313,16 +392,17 @@ date,time,temp_c,hum_pct,press_hpa,als,uvs,context_code,head_code,vbat
 - RGB LED付きスイッチ付きロータリーエンコーダ基本動作
 - `context_code` / `head_code` 文書定義
 - TP4056単体試験合格
-- 電源基板レイアウト確定（72mm×47mm）
-- 電源基板配線図確定
+- **電源基板フェーズ1～7完全成立（通電試験PASS）**
+- **メイン基板 部品配置座標確定**
+- **GPIO割り当て確定**
 
 ---
 
 ## 現時点で未確定の項目
 
-- TPS63802通電試験（実装作業中）
-- `vbat` 実装
-- TPS63802 EN端子用GPIOピン確定
+- `vbat` 実装（分圧回路・ADC読み出し）
+- MCP23017実装・LED R/G/B制御確認
+- EN端子制御（GPIO43）実装・確認
 - `context_code` の最終入力方法
 - `head_code` の最終入力方法
 - 電源基板の最終固定方法
@@ -340,9 +420,13 @@ date,time,temp_c,hum_pct,press_hpa,als,uvs,context_code,head_code,vbat
 - [ACTIVE] 電源ICをXC9306からAE-TPS63802へ変更済み
 - [ACTIVE] 端子台を4ライン構成（3.3V / GND / VBAT_RAW / EN）に更新済み
 - [ACTIVE] 分圧回路はメイン基板側配置に方針確定
-- [ACTIVE] Deep Sleep時のTPS63802 ENシャットダウン方針追加
-- [IN PROGRESS] AE-TPS63802換装・電源基板実装中
+- [ACTIVE] Deep Sleep時のTPS63802 ENシャットダウン方針確定
+- [ACTIVE] **電源基板フェーズ1～7完全成立（通電試験PASS）**
+- [ACTIVE] **メイン基板サイズ95mm×72mmに確定**
+- [ACTIVE] **MCP23017採用確定（LED R/G/B制御）**
+- [ACTIVE] **GPIO割り当て確定（EN=D6/GPIO43・ADC=D7/GPIO44）**
+- [ACTIVE] **メイン基板全部品配置座標確定**
+- [IN PROGRESS] メイン基板実装作業
 - [CHECK] 電池電圧測定未実装
-- [CHECK] TPS63802 EN端子用GPIOピン未確定
 - [CHECK] Deep Sleep電流未測定
 - [CHECK] DS3231主電源断後バックアップ保持の最終判定

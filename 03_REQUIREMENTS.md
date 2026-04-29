@@ -72,8 +72,8 @@ RGB LED付きスイッチ付きロータリーエンコーダ
 - 右回転を CW、左回転を CCW とする
 - 5ノッチ = 5イベントを成立条件とする
 - PUSH / RELEASE を区別して扱う
-- RGB LED は外付け電流制限抵抗を前提とする
-- LED は共通アノード前提を第一候補とする
+- RGB LED は MCP23017（I2C GPIO Expander）経由で制御する
+- RGB LED 各色に 100Ω の電流制限抵抗を設ける
 
 ---
 
@@ -200,7 +200,7 @@ OLED 0.96インチ
 | 3.3V | TPS63802 VOUT出力 | メイン基板 3.3V |
 | GND | GNDバス | メイン基板 GND |
 | VBAT_RAW | TP4056 OUT+直接引き出し | メイン基板 ADC分圧回路 |
-| EN | TPS63802 EN端子 | XIAO GPIO |
+| EN | TPS63802 EN端子 | XIAO D6(GPIO43) |
 
 ### 線材
 
@@ -213,7 +213,7 @@ OLED 0.96インチ
 ### battery voltage monitor 要件
 
 - `TP4056 OUT+ / OUT-` を測定対象とする
-- XIAO の ADC対応ピンで読めること
+- XIAO D7(GPIO44) の ADCで読めること
 - ADC入力には分圧回路を入れること（メイン基板側に実装）
 - 初期値は `100kΩ + 100kΩ` の 1:1 分圧を第一候補とする
 - 必要に応じて ADC中点-GND 間へ安定化用コンデンサーを追加できること
@@ -227,6 +227,8 @@ OLED 0.96インチ
 - センサ・表示の評価は ESP32-WROOM系開発ボードでも実施可能とする
 - 評価用MCUと最終MCUでピン定義は分けて管理する
 - XIAO ESP32S3 Plus のUSBシリアル確認では Arduino IDE の `USB CDC On Boot = Enabled` を前提条件として扱う
+- XIAO ESP32S3 Plus の裏面JTAGランド（GPIO38/39/40）は使用しない
+- LED R/G/B 制御は MCP23017（I2C GPIO Expander）で代替する
 
 ## MCU変更による消費電力前提の変更
 
@@ -253,6 +255,8 @@ DeepSleep時消費電流の前提値は再評価対象とする。
 - 電池は交換・容量変更しやすい構成を優先する
 - 専用基板化は初号機とは分離して後段で検討する
 - ハンダ作業は共晶ハンダ（鉛入り）を使用し、温度は **280℃** を基準とする
+- 全配線は 2.54mm ピッチで統一する
+- OLED / LTR390 / Encoder はケース直付けとし、AWG28ケーブルでメイン基板と接続する
 
 ---
 
@@ -460,14 +464,14 @@ DeepSleep時消費電流の前提値は再評価対象とする。
 | 5ノッチ = 5イベント | 必須 | OK |
 | 押し込み検出 | 必須 | OK |
 | 解放検出 | 必須 | OK |
-| RGB LED 制御 | 必須 | OK |
+| RGB LED 制御 | 必須 | OK（MCP23017経由に変更） |
 
 補足:
 
 - XIAO ESP32S3 Plus 上で ESP32Encoder + PCNT 方式を採用
 - 右回転 = CW、左回転 = CCW を確認
 - PUSH / RELEASE を正常確認
-- LED は共通アノード前提で扱う案を第一候補とする
+- XIAO裏面JTAGランドの使用を断念し、MCP23017（I2C GPIO Expander）でLED R/G/B制御を代替
 
 結論: RGB LED付きスイッチ付きロータリーエンコーダの基本要件は満たすことを確認した。
 
@@ -485,9 +489,9 @@ DeepSleep時消費電流の前提値は再評価対象とする。
 
 補足:
 
-- 現行仮配線は D0(GPIO1)=Encoder A, D1(GPIO2)=Encoder B, D3(GPIO4)=Encoder SW とする
-- LED 制御候補は D11(GPIO38)=R, D12(GPIO39)=G, D13(GPIO40)=B とする
-- 現時点では VIEW / MENU / CLOCK / LOG / SLEEP の基本遷移が成立している
+- D0(GPIO1)=Encoder A / D1(GPIO2)=Encoder B / D3(GPIO4)=Encoder SW
+- LED制御: MCP23017 GPA0=R / GPA1=G / GPA2=B（各100Ω経由）
+- VIEW / MENU / CLOCK / LOG / SLEEP の基本遷移が成立している
 
 結論: XIAO ESP32S3 Plus 上での簡易メニューUI試験は成立した。
 
@@ -508,20 +512,23 @@ DeepSleep時消費電流の前提値は再評価対象とする。
 
 - LiPo 単体で外観異常なし、約4.0Vを確認
 - TP4056 の B / OUT / IN 端子役割を確認済み
-- LiPo → TP4056 → XC9306 → XIAO 構成で Blink 正常動作を確認（XC9306はTPS63802へ換装中）
 - 発熱・異臭ともに認めず
 
-### AE-TPS63802 要件（実装中）
+### AE-TPS63802 電源基板通電試験（PASS）
 
 | 要件 | 内容 | 検証結果 |
 |------|------|----------|
-| 3.3V出力安定 | 必須 | 実装中 |
+| 無負荷 3.3V出力安定 | 必須 | **3.304V ✅** |
+| USB-C単独接続時 3.3V出力 | 必須 | **3.304V ✅** |
+| LiPo単独接続時 3.3V出力 | 必須 | **3.304V ✅** |
+| USB-C + LiPo同時接続時 3.3V出力 | 必須 | **3.304V ✅** |
+| GND-3.3V間ショートなし | 必須 | **確認済み ✅** |
+| RAW-3.3V間ショートなし | 必須 | **確認済み ✅** |
 | EN端子 HIGH で動作 | 必須 | 実装中 |
 | EN端子 LOW でシャットダウン | 必須 | 実装中 |
-| XIAO GPIO で EN 制御 | 必須 | 実装中 |
-| 発熱・異臭なし | 必須 | 実装中 |
+| XIAO GPIO43 で EN 制御 | 必須 | 実装中 |
 
-結論: TP4056 単体試験は合格。AE-TPS63802 は換装・実装作業中。
+結論: TP4056 単体試験合格。AE-TPS63802 電源基板通電試験合格（フェーズ1～7 PASS）。EN端子制御はメイン基板実装後に確認。
 
 ---
 
@@ -529,10 +536,9 @@ DeepSleep時消費電流の前提値は再評価対象とする。
 
 | 要件 | 内容 | 状態 |
 |------|------|------|
-| AE-TPS63802 通電試験 | 3.3V出力・EN制御確認 | 実装中 |
-| battery monitor 分圧回路実装 | R1/R2 実装・ADC読出し | TODO |
-| ADCピン最終確定 | GPIO10 候補 | CHECK |
-| TPS63802 EN用 GPIO 確定 | ピン未確定 | CHECK |
+| battery monitor 分圧回路実装 | R1/R2 実装・ADC読出し（D7/GPIO44） | TODO |
+| MCP23017 実装・LED制御確認 | I2C接続・GPA0/1/2でRGB LED制御 | TODO |
+| TPS63802 EN制御確認 | GPIO43でHIGH/LOW切替・VOUT変化確認 | TODO |
 | LiPo駆動 統合logger 試験 | 電池駆動での全体動作確認 | TODO |
 | LiPo駆動 Deep Sleep logger 試験 | 電池駆動での周期記録確認 | TODO |
 | DS3231 バックアップ保持最終確認 | 主電源断後の時刻保持確認 | CHECK |
@@ -547,8 +553,13 @@ DeepSleep時消費電流の前提値は再評価対象とする。
 - [ACTIVE] 分圧回路はメイン基板側配置に方針確定
 - [ACTIVE] TP4056単体試験合格済み
 - [ACTIVE] ハンダ温度を280℃に修正済み（共晶ハンダ適正温度）
-- [IN PROGRESS] AE-TPS63802換装・電源基板実装中
-- [CHECK] AE-TPS63802通電試験未実施
+- [ACTIVE] **AE-TPS63802電源基板通電試験合格（フェーズ1～7 PASS）**
+- [ACTIVE] **GPIO割り当て確定（EN=D6/GPIO43・ADC=D7/GPIO44）**
+- [ACTIVE] **MCP23017採用確定（LED R/G/B制御・XIAO JTAGランド代替）**
+- [ACTIVE] **メイン基板サイズ95mm×72mmに確定**
+- [ACTIVE] **全配線2.54mmピッチ統一確定**
+- [IN PROGRESS] メイン基板実装作業
 - [CHECK] battery voltage monitor 未実装
-- [CHECK] TPS63802 EN端子用GPIOピン未確定
+- [CHECK] MCP23017 実装・LED制御未確認
+- [CHECK] TPS63802 EN端子制御未確認
 - [CHECK] DS3231主電源断後バックアップ保持の最終判定
