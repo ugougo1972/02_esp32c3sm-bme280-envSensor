@@ -56,11 +56,9 @@
 | 項番 | 機能候補 | XIAO端子 | GPIO | 状況 | 備考 |
 |------|----------|----------|------|------|------|
 | 14 | Battery voltage monitor（分圧後ADC） | D16 | GPIO10 | 予約 | 現時点では保留。分圧回路はメイン基板側で実装予定 |
-| 15 | AE-TPS63802 EN制御（未確定） | TBD | TBD | 予約 | 未確定・後段で決定予定 |
-| 16 | UART TX reserve | D6 | GPIO43 | 予約 | 将来デバッグ用候補 |
-| 17 | UART RX reserve | D7 | GPIO44 | 予約 | 将来デバッグ用候補 |
-| 18 | Future expansion | D14 | GPIO41 | 予約 | 未確認 |
-| 19 | Future expansion | D15 | GPIO42 | 予約 | 未確認 |
+| 15 | AE-TPS63802 EN制御 | TBD | TBD | **予約・後段確定** | **GPIO43またはGPIO44候補**・メイン基板実装時決定予定 |
+| 16 | Future expansion | D14 | GPIO41 | 予約 | 未確認 |
+| 17 | Future expansion | D15 | GPIO42 | 予約 | 未確認 |
 
 ## 接続対象一覧
 
@@ -87,8 +85,9 @@
 |------|------|------|
 | 制御対象 | AE-TPS63802 4P (EN) | Deep Sleep時の電源遮断 |
 | 制御方式 | HIGH = 動作 / LOW = シャットダウン | TPS63802内部設計に従う |
-| GPIO候補 | 未確定 | 端子台経由でメイン基板へ引き出し予定 |
-| 確定予定時期 | 電源基板実装完了後 | 分圧回路実装時に同時確定 |
+| GPIO候補 | GPIO43（D6）またはGPIO44（D7） | **メイン基板実装時に確定予定** |
+| 確定予定時期 | メイン基板実装・分圧回路実装時 | EN端子GPIO割り当て確定 |
+| 端子台接続 | 端子台ライン4（EN） | 電源基板から引き出し済み |
 
 ### Battery voltage monitor ADC入力
 
@@ -97,7 +96,7 @@
 | ADC対象 | TP4056 OUT+（分圧後1.85V@満充電） | メイン基板側に分圧回路実装 |
 | GPIO候補 | GPIO10（D16） | 現時点では予約・未確定 |
 | 分圧比 | 1:2（100kΩ+100kΩ） | 安全範囲内 |
-| 確定予定時期 | 分圧回路実装時 | GPIO10以外への変更可能性あり |
+| 確定予定時期 | メイン基板実装時 | GPIO10以外への変更可能性あり |
 
 ## GPIO使用状況サマリー
 
@@ -225,11 +224,13 @@ D16(GPIO10) は候補予約のみであり、以下は未確定である。
 
 ## ステータス
 
-- [ACTIVE] 初号機向けGPIO割当案として有効
+- [COMPLETE] 初号機向けGPIO割当案として確定
 - [ACTIVE] XIAO ESP32S3 Plus 前提
 - [ACTIVE] RGB LED付きロータリーエンコーダ対応版
-- [ACTIVE] AE-TPS63802 EN端子の電源基板インターフェース確定
-- [CHECK] Battery voltage monitor 用 ADC ピン最終確定待ち
-- [CHECK] AE-TPS63802 EN制御GPIO未確定
+- [COMPLETE] メイン基板配置座標確定
+- [COMPLETE] AE-TPS63802 EN端子の電源基板インターフェース確定
+- [IN PROGRESS] メイン基板実装・GPIO確定（EN端子用GPIO確定待ち）
+- [PENDING] EN制御GPIO最終確定（メイン基板実装時）
+- [PENDING] Battery voltage monitor 用 ADC ピン最終確定（メイン基板実装時）
 - [CHECK] 予約GPIOの最終用途未確定
 - [CHECK] 電源基板 ← → メイン基板のGPIO引き出し詳細未確定

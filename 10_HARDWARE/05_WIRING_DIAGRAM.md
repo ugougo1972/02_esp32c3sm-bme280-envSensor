@@ -49,11 +49,11 @@
 | P-6 | TP4056 OUT- | AE-TPS63802 2P(GND) | AWG28 | ✅ 成立済み | 共通GND |
 | P-7 | TP4056 OUT+ 間 | C1(0.1µF) 他端 | - | ✅ 実装完了 | 入力平滑化 |
 | P-8 | TP4056 OUT- 間 | C1(0.1µF) 他端 | - | ✅ 実装完了 | C1グラウンド |
-| P-9 | AE-TPS63802 3P(VOUT) | C2(47µF) + C3(0.1µF) | AWG28 | 🔄 待機中 | 出力平滑化・ノイズ除去 |
-| P-10 | AE-TPS63802 3P(VOUT) | 3.3V端子台 | AWG28 | 🔄 待機中 | メイン基板へ |
-| P-11 | AE-TPS63802 2P(GND) | GND端子台 | AWG28 | 🔄 待機中 | メイン基板へ |
-| P-12 | TP4056 OUT+ | VBAT_SENSE_RAW端子台 | AWG28 | 🔄 待機中 | 分圧回路用 |
-| P-13 | AE-TPS63802 4P(EN) | EN端子台 | AWG28 | 🔄 待機中 | GPIO制御用 |
+| P-9 | AE-TPS63802 3P(VOUT) | C2(47µF) + C3(0.1µF) | AWG28 | ✅ 実装完了 | 出力平滑化・ノイズ除去 |
+| P-10 | AE-TPS63802 3P(VOUT) | 3.3V端子台 | AWG28 | ✅ 実装完了 | メイン基板へ |
+| P-11 | AE-TPS63802 2P(GND) | GND端子台 | AWG28 | ✅ 実装完了 | メイン基板へ |
+| P-12 | TP4056 OUT+ | VBAT_SENSE_RAW端子台 | AWG28 | ✅ 実装完了 | 分圧回路用 |
+| P-13 | AE-TPS63802 4P(EN) | EN端子台 | AWG28 | ✅ 実装完了 | GPIO制御用 |
 
 ### 電源基板の物理構成
 
@@ -65,6 +65,7 @@
 | TP4056配置 | 基板左寄り |
 | AE-TPS63802配置 | 基板中央～右寄り |
 | 端子台配置 | 基板下辺（4ライン） |
+| **実装状況** | **✅ 全フェーズ完了・通電試験PASS** |
 
 ### 電源基板実装フェーズ進捗
 
@@ -72,11 +73,11 @@
 |----------|----------|------|--------|
 | 1 | GNDバス・3.3Vライン配線 | ✅ DONE | 低インピーダンス経路確保 |
 | 2 | TP4056実装・OUT-接続・C1追加 | ✅ DONE | 充電入力安定化 |
-| 3 | AE-TPS63802実装・ハンダ付け（1P～4P） | 🔄 停滞中 | 3.3V出力生成 |
-| 4 | C2(47µF電解)・C3(0.1µF MLCC)実装 | ⬜ 待機中 | 出力平滑化・ノイズ除去 |
-| 5 | 端子台（4ライン）実装 | ⬜ 待機中 | メイン基板インターフェース |
-| 6 | 導通確認（GND短絡なし・C2極性・EN浮き） | ⬜ 待機中 | 安全確認 |
-| 7 | 通電試験（無負荷・XIAO接続前） | ⬜ 未実施 | 3.3V出力確認 |
+| 3 | AE-TPS63802実装・ハンダ付け（1P～4P） | ✅ DONE | 3.3V出力生成 |
+| 4 | C2(47µF電解)・C3(0.1µF MLCC)実装 | ✅ DONE | 出力平滑化・ノイズ除去 |
+| 5 | 端子台（4ライン）実装 | ✅ DONE | メイン基板インターフェース |
+| 6 | 導通確認（GND短絡なし・C2極性・EN浮き） | ✅ DONE | 安全確認 |
+| 7 | 通電試験（無負荷・全条件） | ✅ **COMPLETE** | **3.3V=3.304V確認・全項目PASS** |
 
 ### ハンダ作業仕様（共晶ハンダ）
 
@@ -102,20 +103,20 @@
 
 | ライン | 信号 | 電源基板側 | メイン基板側 | 用途 | 状況 |
 |--------|------|-----------|------------|------|------|
-| 1 | 3.3V | AE-TPS63802 3P(VOUT) | XIAO 3V3 | センサ・RTC・OLED・microSD給電 | 🔄 待機中 |
-| 2 | GND | GNDバス（TP4056 OUT-） | XIAO GND | GND共通 | 🔄 待機中 |
-| 3 | VBAT_SENSE_RAW | TP4056 OUT+直接 | 分圧回路 R1上端 | Battery voltage monitor測定用 | 🔄 待機中 |
-| 4 | EN | AE-TPS63802 4P(EN) | XIAO GPIO（未確定） | Deep Sleep時電源遮断制御 | 🔄 待機中 |
+| 1 | 3.3V | AE-TPS63802 3P(VOUT) | XIAO 3V3 | センサ・RTC・OLED・microSD給電 | ✅ 電源基板完了・メイン基板接続待ち |
+| 2 | GND | GNDバス（TP4056 OUT-） | XIAO GND | GND共通 | ✅ 電源基板完了・メイン基板接続待ち |
+| 3 | VBAT_SENSE_RAW | TP4056 OUT+直接 | 分圧回路 R1上端 | Battery voltage monitor測定用 | ⬜ メイン基板実装予定 |
+| 4 | EN | AE-TPS63802 4P(EN) | XIAO GPIO（未確定） | Deep Sleep時電源遮断制御 | ⬜ GPIO割り当て確定後に接続 |
 
 ### メイン基板への電源配布
 
 | 項番 | 信号 | 接続先 | 状況 | 備考 |
 |------|------|--------|------|------|
-| M-P1 | 3.3V | XIAO 3V3 | 🔄 待機中 | 外部3.3V入力 |
-| M-P2 | GND | XIAO GND | 🔄 待機中 | GND共通 |
-| M-P3 | 3.3V | BME280 VCC / LTR390 VCC / SSD1306 VCC / DS3231 VCC / microSD VCC | 🔄 待機中 | 全センサ・表示・記録給電 |
-| M-P4 | GND | 全デバイス GND | 🔄 待機中 | GND共通 |
-| M-P5 | VBAT_SENSE_RAW | 分圧回路 R1上端 | 🔄 待機中 | battery monitor用 |
+| M-P1 | 3.3V | XIAO 3V3 | ✅ 確定 | 外部3.3V入力 |
+| M-P2 | GND | XIAO GND | ✅ 確定 | GND共通 |
+| M-P3 | 3.3V | BME280 VCC / LTR390 VCC / SSD1306 VCC / DS3231 VCC / microSD VCC | ✅ 確定 | 全センサ・表示・記録給電 |
+| M-P4 | GND | 全デバイス GND | ✅ 確定 | GND共通 |
+| M-P5 | VBAT_SENSE_RAW | 分圧回路 R1上端 | ⬜ メイン基板実装予定 | battery monitor用 |
 
 ## 3. Battery Voltage Monitor 配線（メイン基板側実装）
 
@@ -346,15 +347,16 @@ GPIO詳細は `04_PIN_ASSIGNMENT.md` を参照する。
 
 ## ステータス
 
+- [COMPLETE] **初号機配線方針確定・電源基板通電試験全項目PASS**
 - [ACTIVE] 初号機配線方針として有効
 - [ACTIVE] ユニバーサル基板実装前提
 - [ACTIVE] 電源基板 + メイン基板の二基板構成方針
-- [ACTIVE] LiPo → TP4056 → **AE-TPS63802** → XIAO の最小電源経路成立済み
-- [ACTIVE] 4ライン端子台インターフェース確定（3.3V / GND / VBAT_SENSE_RAW / EN）
-- [ACTIVE] 電源基板レイアウト確定（72mm × 47mm）
-- [ACTIVE] ハンダ作業温度 280℃ に確定
-- [CHECK] AE-TPS63802実装・ハンダ付け停滞中
-- [CHECK] AE-TPS63802通電試験未実施
-- [CHECK] Battery voltage monitor 分圧回路実装待機中
-- [CHECK] ADCピン最終確定待機中
-- [CHECK] 基板上レイアウト詳細未確定
+- [COMPLETE] LiPo → TP4056 → **AE-TPS63802** → XIAO の最小電源経路完全成立
+- [COMPLETE] 4ライン端子台インターフェース確定（3.3V / GND / VBAT_SENSE_RAW / EN）
+- [COMPLETE] 電源基板レイアウト確定（72mm × 47mm）
+- [COMPLETE] 電源基板全フェーズ実装完了・通電試験PASS
+- [COMPLETE] ハンダ作業温度 280℃ に確定
+- [IN PROGRESS] メイン基板実装予定（分圧回路から開始）
+- [PENDING] Battery voltage monitor 分圧回路実装
+- [PENDING] ADCピン最終確定待機中
+- [PENDING] 基板上レイアウト詳細未確定

@@ -23,7 +23,9 @@
 - RTC調整は **PC → USBシリアル → MCU → DS3231** で行う
 - 初号機では、機能成立を優先し、消費電流最適化は完成後評価とする
 - CSV列名・コード定義は、**`03_LOG_FORMAT.md` / `04_ctx.md` / `05_head.md` と整合**させる
-- 電源系は **LiPo → TP4056 → XC9306 → XIAO** の最小構成成立を基準点とする
+- 電源系は **LiPo → TP4056 → AE-TPS63802 → XIAO** の最小構成成立を基準点とする
+  - **電源基板通電試験 全項目PASS**（無負荷・USB-C単独・LiPo単独・USB-C+LiPo同時で3.304V確認）
+  - **AE-TPS63802 実装完了**（XC9306から変更）
 - Battery voltage monitor は **`TP4056 OUT+ / OUT-` を対象にした分圧回路** を前提に後段追加する
 
 ## ソフトウェアの役割
@@ -345,10 +347,14 @@ microSD に CSV 形式で保存する。
 ## ステータス
 
 - [ACTIVE] 初号機ソフトウェア概要として有効
-- [ACTIVE] USB給電ベースの統合ソフト構成は成立済み
+- [COMPLETE] USB給電ベースの統合ソフト構成は成立済み
 - [ACTIVE] Deep Sleep logger 基準版を現時点の基準点とする
 - [ACTIVE] RGB LED付きスイッチ付き Rotary Encoder 前提へ更新済み
-- [ACTIVE] LiPo → TP4056 → XC9306 → XIAO の最小電源経路成立済み
-- [CHECK] 電池駆動での Deep Sleep logger 成立は未確認
-- [CHECK] 電池電圧監視未実装
-- [CHECK] `context_code` / `head_code` の最終入力UI未確定
+- [COMPLETE] **LiPo → TP4056 → AE-TPS63802 → XIAO の最小電源経路完全成立**
+- [COMPLETE] **電源基板通電試験全項目PASS**
+- [COMPLETE] **メイン基板配置座標確定**
+- [COMPLETE] **MCP23017採用確定**（LED制御用I2C GPIO Expander）
+- [IN PROGRESS] メイン基板実装進行中
+- [PENDING] 電池駆動での Deep Sleep logger 成立確認
+- [PENDING] 電池電圧監視実装
+- [PENDING] `context_code` / `head_code` の最終入力UI実装

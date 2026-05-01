@@ -264,7 +264,9 @@ Deep Sleep logger は、低消費電力運用を前提とした基準版であ�
 - [ACTIVE] MENU / CLOCK / LOG / SLEEP 基本遷移を定義
 - [ACTIVE] periodic logger / Deep Sleep logger の基本動作状態を定義
 - [ACTIVE] RGB LED付きスイッチ付き Rotary Encoder 前提へ更新済み
-- [CHECK] 電池駆動での Deep Sleep logger 成立は未確認
-- [CHECK] SLEEP画面の確定挙動は実装方式により調整余地あり
-- [CHECK] エラー状態の最終復旧仕様は未確定
-- [CHECK] 頭痛入力・context編集状態は未実装
+- [COMPLETE] **電源基板通電試験全項目PASS により安定性確保**
+- [COMPLETE] **メイン基板配置座標確定**
+- [PENDING] 電池駆動での Deep Sleep logger 成立確認
+- [PENDING] SLEEP画面の確定挙動は実装方式により調整余地あり
+- [PENDING] エラー状態の最終復旧仕様は未確定
+- [PENDING] 頭痛入力・context編集状態は未実装

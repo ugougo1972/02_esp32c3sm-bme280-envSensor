@@ -18,6 +18,9 @@
 - 完成まで電流測定は実施しない
 - 電池寿命の厳密評価は後段とし、まずは機能成立を優先する
 - 初号機では **電源系を別基板、メイン機能系を別基板** とする二基板構成を採用する
+  - **電源基板**：72mm × 47mm（両面スルーホール）
+  - **メイン基板**：72mm × 47mm（両面スルーホール・電源基板と同一製品）
+  - 接続方式：4ライン端子台（3.3V / GND / VBAT_RAW / EN）
 
 ## システム全体構成
 
@@ -144,8 +147,15 @@ MCUは、センサ読出し、時刻取得、画面表示、入力読取り、CS
 - 右回転 = CW、左回転 = CCW
 - 5ノッチ = 5イベントを基準とする
 - PUSH / RELEASE を安定検出できる構成とする
-- RGB LED は各色に外付け電流制限抵抗を入れる
-- LED極性は現時点では **共通アノード前提 [CHECK]** とする
+- **RGB LED は MCP23017（I2C GPIO Expander、アドレス0x20）の GPA0/GPA1/GPA2 経由で制御する**
+- 各色に外付け電流制限抵抗（100Ω）を入れる
+- LED極性は **共通カソード** 前提とする
+
+#### MCP23017採用理由
+
+- XIAO 裏面 JTAG ランド（GPIO38/39/40）はユニバーサル基板実装後アクセス不可のため使用不可
+- I2C GPIO Expander として、既存 I2C バス（DS3231/BME280/LTR390/OLED）に統合可能
+- 秋月電子販売コード109486、在庫十分
 
 ### 6. 記録ブロック
 
@@ -357,21 +367,35 @@ LiPo
 - D9(GPIO8) = MISO
 - D10(GPIO9) = MOSI
 
-### RGB Encoder
+### Rotary Encoder
 
 - D0(GPIO1) = Encoder A
 - D1(GPIO2) = Encoder B
 - D3(GPIO4) = Encoder SW
-- D11(GPIO38) = LED R
-- D12(GPIO39) = LED G
-- D13(GPIO40) = LED B
 
-### 電源制御・監視（予約）
+### 電源制御・監視
 
-- TBD（未確定） = TPS63802 EN端子（Deep Sleep制御用）
-- D16(GPIO10) = Battery voltage monitor 候補予約（未実装）
-- D6(GPIO43) = UART TX reserve
-- D7(GPIO44) = UART RX reserve
+- **D6(GPIO43) = TPS63802 EN制御（Deep Sleep制御用）**
+- **D7(GPIO44) = Battery ADC入力（電池電圧監視用）**
+
+### I2C接続デバイス
+
+| デバイス | I2Cアドレス | 接続方法 |
+|---------|-----------|---------|
+| BME280 | 0x76 | 基板直付け |
+| LTR390 | 0x53 | JST2経由（外部接続） |
+| OLED SSD1306 | 0x3C | JST1経由（外部接続） |
+| DS3231 | 0x68 | 基板直付け |
+| AT24C32 | 0x57 | DS3231モジュール同梱 |
+| **MCP23017** | **0x20** | **基板直付け** |
+
+### MCP23017 GPIO出力
+
+| MCP出力 | 役割 | 接続先 |
+|--------|------|--------|
+| GPA0 | LED R | 100Ω電流制限抵抗経由 → Encoder R端子 |
+| GPA1 | LED G | 100Ω電流制限抵抗経由 → Encoder G端子 |
+| GPA2 | LED B | 100Ω電流制限抵抗経由 → Encoder B端子 |
 
 詳細は `04_PIN_ASSIGNMENT.md` を参照する。
 
@@ -405,19 +429,25 @@ LiPo
 - periodic logger
 - Deep Sleep logger
 - VIEW / MENU / CLOCK / LOG / SLEEP 基本UI
-- RGB LED付きロータリーエンコーダの回転 / 押下 / RGB LED 制御
+- RGB LED付きロータリーエンコーダの回転 / 押下検出
+- **MCP23017（I2C GPIO Expander）の I2C 統合対応**
+- **RGB LED 制御（MCP23017 GPA0/GPA1/GPA2経由）**
 - LiPo → TP4056 → AE-TPS63802 → XIAO 3.3V給電
-- LiPo駆動での Blink 動作
+- LiPo駆動での 基本動作
 - TP4056単体試験 合格
+- **電源基板通電試験 完全PASS**
 
 ## 初号機で未確定の要素
 
 以下は現時点で未確定、または後段で確定する。
 
-- AE-TPS63802実装・通電試験（作業中）
-- 電池電圧監視回路の本実装
-- 残量表示方式
-- 電源基板とメイン基板の物理的な最終接続方法
+- メイン基板実装未完了（分圧回路から開始予定）
+- MCP23017実装・動作確認
+- EN端子制御（GPIO43）実装・動作確認
+- Battery ADC（GPIO44）実装・動作確認
+- LiPo駆動での統合試験
+- Deep Sleep logger 試験
+- 電源基板とメイン基板の物理的な接続方法（配線 vs コネクタ）
 - ユニバーサル基板上の最終配線の物理レイアウト
 - ケース / 筐体構成
 - context_code / head_code 入力UIの最終形
@@ -437,14 +467,55 @@ LiPo
 
 ## ステータス
 
-- [ACTIVE] 初号機ハードウェア概要として有効
-- [ACTIVE] XIAO ESP32S3 Plus を最終構成候補MCUとする
-- [ACTIVE] ユニバーサル基板 + 既製モジュール前提
-- [ACTIVE] LiPo → TP4056 → AE-TPS63802 → XIAO の最小電源経路成立済み
-- [ACTIVE] 電源系別基板方針を採用
-- [ACTIVE] AE-TPS63802採用（XC9306から変更）
-- [ACTIVE] 電源基板配置図・実装順序確定
-- [CHECK] AE-TPS63802実装・ハンダ付け停滞中
-- [CHECK] 通電試験未実施
-- [CHECK] Battery voltage monitor 本実装未完了
-- [CHECK] 筐体設計未確定
+### 電源基板
+
+- [COMPLETE] LiPo → TP4056 → AE-TPS63802 → XIAO の最小電源経路 **完全成立**
+- [COMPLETE] 電源基板配置図 **完全確定**
+- [COMPLETE] 電源基板実装順序 **確定**
+- [COMPLETE] 通電試験 **全項目PASS**
+  - 無負荷：3.304V ✅
+  - USB-C単独：3.304V ✅
+  - LiPo単独：3.304V ✅
+  - USB-C + LiPo同時：3.304V ✅
+  - GND-3.3V間ショート確認：なし ✅
+  - RAW-3.3V間ショート確認：なし ✅
+- [COMPLETE] AE-TPS63802採用（XC9306から変更）
+- [COMPLETE] 電源系別基板方針 **確立**
+
+### メイン基板
+
+- [COMPLETE] メイン基板配置座標 **完全確定**
+  - XIAO：(1,1)～(7,7)
+  - MCP23017：(12,3)～(15,16)
+  - DS3231：(17,1)～(24,15)
+  - BME280：(18,16)～(23,18)
+  - microSD：(1,13)～(8,18)
+  - JST群：(8,1)～(10,8)
+  - Encoder：(10,17)～(17,18)
+  - 端子台：(13,1)～(16,2)
+  - 分圧回路：(1,9)～(6,11)
+- [COMPLETE] GPIO割り当て **完全確定**
+  - D0-D10：確定
+  - D6(GPIO43)：TPS63802 EN制御 ✅
+  - D7(GPIO44)：Battery ADC ✅
+- [COMPLETE] MCP23017採用 **確定**
+  - I2Cアドレス：0x20
+  - GPA0/GPA1/GPA2：RGB LED制御
+  - 秋月電子販売コード109486
+- [COMPLETE] 配線計画 **完全確定**
+- [ACTIVE] メイン基板実装 **進行中**
+
+### 統合・試験
+
+- [PENDING] EN制御実装・確認
+- [PENDING] ADC分圧回路実装・確認
+- [PENDING] 統合試験（LiPo駆動・Deep Sleep）
+
+### 設計ドキュメント
+
+- [ACTIVE] 01_HARDWARE_OVERVIEW.md（本ファイル）
+- [IN PROGRESS] 02_PARTS_LIST.md（更新予定）
+- [IN PROGRESS] 03_POWER_DESIGN.md（更新予定）
+- [IN PROGRESS] 04_PIN_ASSIGNMENT.md（新規作成予定）
+- [IN PROGRESS] 05_WIRING_DIAGRAM.md（新規作成予定）
+- [PENDING] 06_ENCLOSURE.md（後段）

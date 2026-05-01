@@ -16,7 +16,9 @@
 - OLED は常時点灯せず、必要時のみ表示する
 - 電流測定は完成まで実施しない
 - 電池寿命の厳密見積りも後段で行う
-- 電源経路は **LiPo → TP4056 → XC9306 → XIAO** を採用基準とする
+- 電源経路は **LiPo → TP4056 → AE-TPS63802 → XIAO** を採用基準とする
+  - **AE-TPS63802 実装完了**（XC9306から変更）
+  - **EN端子付き** でDeep Sleep時の完全電源遮断が可能
 - 初号機では **電源基板** と **メイン基板** を分けて考える
 - Battery voltage monitor は **分圧回路追加後に有効化** する
 
@@ -55,7 +57,7 @@
 
 | 項目 | 方針 |
 |------|------|
-| 給電 | LiPo + TP4056 + XC9306 |
+| 給電 | LiPo + TP4056 + AE-TPS63802 |
 | Serial Monitor | 常用しない |
 | logger | Deep Sleep logger |
 | Deep Sleep | 基本動作 |
@@ -70,13 +72,20 @@
 - LiPo 単体電圧確認済み
 - TP4056 端子構成確認済み
 - TP4056 充電動作確認済み
-- XC9306 3.3V 出力確認済み
-- **LiPo → TP4056 → XC9306 → XIAO** 接続で **XIAO 3V3 = 約3.29V** 安定確認済み
-- LiPo駆動で **Blink 正常動作** 確認済み
+- **AE-TPS63802 実装・ハンダ付け完了**
+- **AE-TPS63802 3.3V 出力確認済み**
+- **LiPo → TP4056 → AE-TPS63802 → XIAO** 接続で **XIAO 3V3 = 3.304V** 安定確認済み
+- **電源基板通電試験 全項目PASS**
+  - 無負荷：3.304V ✅
+  - USB-C単独：3.304V ✅
+  - LiPo単独：3.304V ✅
+  - USB-C + LiPo同時：3.304V ✅
+- LiPo駆動で **Blink** 正常動作確認済み
 
 ### 未確認
 
-- 電池駆動での Deep Sleep logger 成立
+- 電池駆動での Deep Sleep logger 成立（ハードウェア整備完了待ち）
+- AE-TPS63802 EN端子制御によるシャットダウン（GPIO接続待ち）
 - `vbat` 実装後の ADC安定性
 - 完成後の実消費電流
 
@@ -306,10 +315,14 @@ Deep Sleep 復帰後は、前回動作状態を保持前提にせず、毎回再
 ## ステータス
 
 - [ACTIVE] 初号機電源制御方針として有効
+- [COMPLETE] **電源基板通電試験全項目PASS**
+- [COMPLETE] **AE-TPS63802 実装完了**（XC9306から変更）
+- [COMPLETE] **LiPo → TP4056 → AE-TPS63802 → XIAO の最小電源経路完全成立**
 - [ACTIVE] Deep Sleep logger 基準版を基準点とする
 - [ACTIVE] 起床後再初期化方針を採用
 - [ACTIVE] OLED は常時点灯しない方針
-- [ACTIVE] LiPo → TP4056 → XC9306 → XIAO の最小電源経路成立済み
-- [CHECK] 電池駆動時の Deep Sleep logger 成立未確認
-- [CHECK] 実消費電流未測定
-- [CHECK] Battery voltage monitor 未実装
+- [IN PROGRESS] メイン基板実装進行中
+- [PENDING] 電池駆動時の Deep Sleep logger 成立確認（メイン基板実装完了後）
+- [PENDING] AE-TPS63802 EN端子制御の実装（GPIO割り当て確定後）
+- [PENDING] 実消費電流測定
+- [PENDING] Battery voltage monitor 実装

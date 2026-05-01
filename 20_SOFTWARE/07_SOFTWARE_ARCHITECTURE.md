@@ -10,6 +10,8 @@
 ## 基本方針
 
 - 実装は **Arduino IDE / XIAO ESP32S3 Plus** を前提とする
+- 電源経路は **LiPo → TP4056 → AE-TPS63802 → XIAO**（通電試験全項目PASS）を前提とする
+- RGB LED制御は **MCP23017（I2C GPIO Expander、アドレス0x20）** 経由とする（XIAO裏面JTAG ランド使用不可のため）
 - 初号機では、**1スケッチで全体成立** を優先する
 - 処理は役割ごとに関数分割する
 - `setup()` / `loop()` の責務を明確に分ける
@@ -368,10 +370,15 @@ String buildCsvLine(const LogRecord &rec) {
 ## ステータス
 
 - [ACTIVE] 初号機ソフトウェア実装構造として有効
+- [COMPLETE] **電源基板通電試験全項目PASS により基盤確保**
+- [COMPLETE] **メイン基板配置座標確定**
+- [COMPLETE] **MCP23017採用確定**（RGB LED制御用）
 - [ACTIVE] Deep Sleep logger 基準版を基準構造とする
 - [ACTIVE] 単一スケッチ + 関数分割方針を採用
 - [ACTIVE] `context_code` / `head_code` / `vbat` を含む LogRecord 構造を採用
 - [ACTIVE] RGB LED付きスイッチ付き Rotary Encoder 前提へ更新済み
-- [CHECK] `vbat` 実装未着手
-- [CHECK] `context_code` / `head_code` 入力UI未確定
-- [CHECK] 将来のファイル分割は未確定
+- [IN PROGRESS] メイン基板実装進行中
+- [PENDING] `vbat` 実装（分圧回路追加後）
+- [PENDING] `context_code` / `head_code` 入力UI実装
+- [PENDING] 電池駆動での Deep Sleep logger 再確認（メイン基板完了後）
+- [PENDING] 将来のファイル分割は未確定
