@@ -1,45 +1,93 @@
 # CURRENT_STATUS
 
-## Project Status
+本ファイルは、このリポジトリにおける最新状態の唯一の集約点です。  
+他文書と内容が矛盾する場合は、本ファイルを優先します。
 
-- ACTIVE
-- Main board implementation in progress
-- Repository restructuring in progress
+---
 
-## Current Hardware
+## プロジェクト状態
 
-| Category | Selection |
+| 項目 | 状態 |
+|---|---|
+| プロジェクト | ACTIVE |
+| 実装段階 | メイン基板実装フェーズ |
+| ドキュメント整理 | 進行中 |
+| 最新状態管理 | 本ファイルへ集約 |
+
+---
+
+## 現行ハードウェア構成
+
+| 区分 | 現行選定 |
 |---|---|
 | MCU | Seeed Studio XIAO ESP32S3 Plus |
-| Sensor | BME280 |
-| Light Sensor | LTR390 |
+| 環境センサ | BME680 |
+| 光・UVセンサ | LTR390 |
 | RTC | DS3231 |
-| Storage | microSD |
-| GPIO Expander | MCP23017 |
-| Power | TP4056 + AE-TPS63802 |
+| 記録媒体 | microSD |
+| 表示 | OLED SSD1306 0.96インチ I2C |
+| 入力 | RGB LED付きスイッチ付きロータリーエンコーダ |
+| GPIO拡張 | MCP23017 |
+| 電源 | LiPo + TP4056 + AE-TPS63802 |
 
-## Confirmed
+---
 
-- GPIO assignment confirmed
-- DeepSleep design confirmed
-- MCP23017 adopted
-- Power board test passed
+## BME280 / BME680 状態
 
-## In Progress
+| 項目 | 状態 |
+|---|---|
+| BME280 | 破損判明により現行構成から除外 |
+| BME680 | 秋月電子製4ピンI2C品を現行環境センサとして採用 |
+| ガス指標 | 取得可否・運用方法は評価中 |
+| BME680ヒーター | 低消費電力運用上、必要時のみ有効化を検討 |
 
-- Main board assembly
-- Battery monitor implementation
-- EN control implementation
+---
 
-## Pending
+## 確定済み事項
 
-- LiPo integration test
-- DeepSleep integration test
-- Case design
+- MCUは Seeed Studio XIAO ESP32S3 Plus を使用する
+- 電源基板とメイン基板を分離する
+- 電源は TP4056 + AE-TPS63802 構成とする
+- AE-TPS63802 の EN 端子を利用した電源制御を検討する
+- GPIO拡張には MCP23017 を使用する
+- RGB LED付きロータリーエンコーダを入力・状態表示に使用する
+- microSDへCSV形式で記録する
+- DS3231を時刻源とする
+- READMEは入口文書に限定する
+- 設計判断は `50_DECISIONS/` に保存する
+- 旧仕様は `90_HISTORY/` に隔離する
 
-## Rules
+---
 
-- README is overview only
-- Latest status must be maintained here
-- Old specifications must move to 90_HISTORY
-- Design reasons must move to 50_DECISIONS
+## 進行中
+
+- メイン基板実装
+- Battery voltage monitor 実装
+- AE-TPS63802 EN制御実装
+- BME680へのドキュメント同期
+- Markdown責務分離の継続整理
+
+---
+
+## 未確認・保留事項
+
+| 項目 | 状態 |
+|---|---|
+| BME680統合動作確認 | 未確認 |
+| BME680ガス指標の記録仕様 | 未確定 |
+| BME680ヒーター運用 | 未確定 |
+| LiPo駆動統合ロガー試験 | 未実施 |
+| Deep Sleep統合試験 | 未実施 |
+| 消費電流実測 | 完成後評価 |
+| ケース設計 | 未実施 |
+
+---
+
+## 運用ルール
+
+- 最新状態は本ファイルへ記載する
+- READMEへ詳細仕様を戻さない
+- 現行仕様は各仕様ファイルへ記載する
+- 変更理由は `50_DECISIONS/` へ記載する
+- 廃止仕様・旧実績は `90_HISTORY/` へ移動する
+- 仕様、進捗、履歴、判断理由を同一節に混在させない
