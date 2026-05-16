@@ -41,7 +41,7 @@ READMEは概要・入口文書です。
 - Deep Sleep中心の低消費電力運用
 - README肥大化を避け、責務分離を維持
 - 最新状態は `CURRENT_STATUS.md` に集約
-- 決定理由を `50_DECISIONS/` に保存
+- 決定理由を `51_DECISIONS/` に保存
 - 旧仕様・廃止案を `90_HISTORY/` に隔離
 
 ---
@@ -58,7 +58,7 @@ READMEは概要・入口文書です。
 ├─ 20_SOFTWARE/
 ├─ 30_LOG/
 ├─ 40_DEV/
-├─ 50_DECISIONS/
+├─ 51_DECISIONS/
 └─ 90_HISTORY/
 ```
 
@@ -76,7 +76,7 @@ READMEは概要・入口文書です。
 | 20_SOFTWARE | 現行ソフトウェア仕様 |
 | 30_LOG | 測定・分析・試験記録 |
 | 40_DEV | 実装・開発管理 |
-| 50_DECISIONS | 設計判断と理由 |
+| 51_DECISIONS | 設計判断と理由 |
 | 90_HISTORY | 廃止仕様・旧履歴 |
 
 ---
@@ -101,7 +101,7 @@ READMEは概要・入口文書です。
 - 最新仕様と履歴を混在させない
 - READMEへ詳細仕様を戻さない
 - 変更時は `CURRENT_STATUS.md` と該当仕様文書を更新する
-- 設計変更時は `50_DECISIONS/` に判断理由を追加する
+- 設計変更時は `51_DECISIONS/` に判断理由を追加する
 - 廃止仕様は削除せず `90_HISTORY/` に隔離する
 
 ---
