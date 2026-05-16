@@ -54,6 +54,8 @@ microSDへCSV保存
 - USB CDC の COM ポートは Deep Sleep 中に切断され得るため、Deep Sleep 試験の合否は CSV 追記結果を優先して判定する
 - Deep Sleep 実消費電流は完成まで未測定とし、別途最終評価で扱う
 - TPS63802 EN 端子の GPIO 制御により、センサ類への 3.3V 供給を完全遮断できる
+- GPIO43(TPS63802_EN)はRTC GPIO非対応のためDeepSleep中Hi-Z化する可能性がある→回路側100kΩプルアップで対策（R_EN）
+- microSD は DeepSleep 時に地味に電流を消費するため、Sleep前に CS=HIGH固定と SPI.end() を実施すること
 
 ---
 
@@ -74,6 +76,7 @@ RGB LED付きスイッチ付きロータリーエンコーダ
 - PUSH / RELEASE を区別して扱う
 - RGB LED は MCP23017（I2C GPIO Expander）経由で制御する
 - RGB LED 各色に 100Ω の電流制限抵抗を設ける
+- Encoder復帰はGPIO1/2/3がRTC GPIO対応のためEXT0/EXT1で復帰可能
 
 ---
 
@@ -213,11 +216,49 @@ OLED 0.96インチ
 ### battery voltage monitor 要件
 
 - `TP4056 OUT+ / OUT-` を測定対象とする
-- XIAO D7(GPIO44) の ADCで読めること
+- XIAO D3(GPIO4) の ADCで読めること（ADC1_CH3）
 - ADC入力には分圧回路を入れること（メイン基板側に実装）
 - 初期値は `100kΩ + 100kΩ` の 1:1 分圧を第一候補とする
 - 必要に応じて ADC中点-GND 間へ安定化用コンデンサーを追加できること
 - `vbat` の値はテスター実測と概ね整合すること
+
+---
+
+## GPIO割り当て
+
+### XIAO ESP32S3 Plus ピン確定
+
+| XIAO端子 | GPIO | 用途 | 特性 |
+|----------|------|------|------|
+| D0 | GPIO1 | Encoder_A | RTC GPIO対応 |
+| D1 | GPIO2 | Encoder_B | RTC GPIO対応 |
+| D2 | GPIO3 | Encoder_SW | RTC GPIO対応 |
+| D3 | GPIO4 | Battery_ADC(ADC1_CH3) | RTC GPIO対応 |
+| D4 | GPIO5 | I2C_SDA | 確定 |
+| D5 | GPIO6 | I2C_SCL | 確定 |
+| D6 | GPIO43 | TPS63802_EN | RTC GPIO非対応→100kΩプルアップで対策 |
+| D7 | GPIO44 | SPI_CS | UART RX兼用・USB CDC主体で通常GPIO利用可 |
+| D8 | GPIO7 | SPI_SCK | 確定 |
+| D9 | GPIO8 | SPI_MISO | 確定 |
+| D10 | GPIO9 | SPI_MOSI | 確定 |
+| D16 | GPIO10 | 予約 | 未使用 |
+
+### スケッチ作成上の注意点
+
+1. **GPIO43(TPS63802_EN)のDeepSleep対応**：RTC GPIO非対応のため、DeepSleep中にHi-Z化する可能性がある。回路側100kΩプルアップ(R_EN)で対策済み。
+
+2. **GPIO44(SPI_CS)のUART兼用**：UARTデバッグが必要な場合は別ピンへの変更を検討すること。初号機ではUSB CDC主体のためGPIO44利用は可能。
+
+3. **GPIO43/44の両線転用**：UART両線がセンサGPIOに転用されているため、UARTデバッグは利用不可。
+
+4. **microSD CS処理**：DeepSleep前に以下を実施すること：
+   ```cpp
+   pinMode(PIN_SPI_CS, OUTPUT);
+   digitalWrite(PIN_SPI_CS, HIGH);
+   SPI.end();
+   ```
+
+5. **Encoder復帰**：GPIO1/2/3はRTC GPIO対応のため、EXT0/EXT1によるDeepSleep復帰が可能。Encoder_SW(GPIO3)での復帰も実装可能。
 
 ---
 
@@ -257,6 +298,7 @@ DeepSleep時消費電流の前提値は再評価対象とする。
 - ハンダ作業は共晶ハンダ（鉛入り）を使用し、温度は **280℃** を基準とする
 - 全配線は 2.54mm ピッチで統一する
 - OLED / LTR390 / Encoder はケース直付けとし、AWG28ケーブルでメイン基板と接続する
+- メイン基板にはEN維持用プルアップ抵抗(R_EN 100kΩ)を配置する
 
 ---
 
@@ -489,7 +531,7 @@ DeepSleep時消費電流の前提値は再評価対象とする。
 
 補足:
 
-- D0(GPIO1)=Encoder A / D1(GPIO2)=Encoder B / D3(GPIO4)=Encoder SW
+- D0(GPIO1)=Encoder A / D1(GPIO2)=Encoder B / D2(GPIO3)=Encoder SW
 - LED制御: MCP23017 GPA0=R / GPA1=G / GPA2=B（各100Ω経由）
 - VIEW / MENU / CLOCK / LOG / SLEEP の基本遷移が成立している
 
@@ -536,7 +578,7 @@ DeepSleep時消費電流の前提値は再評価対象とする。
 
 | 要件 | 内容 | 状態 |
 |------|------|------|
-| battery monitor 分圧回路実装 | R1/R2 実装・ADC読出し（D7/GPIO44） | TODO |
+| battery monitor 分圧回路実装 | R1/R2 実装・ADC読出し（D3/GPIO4） | TODO |
 | MCP23017 実装・LED制御確認 | I2C接続・GPA0/1/2でRGB LED制御 | TODO |
 | TPS63802 EN制御確認 | GPIO43でHIGH/LOW切替・VOUT変化確認 | TODO |
 | LiPo駆動 統合logger 試験 | 電池駆動での全体動作確認 | TODO |
@@ -554,10 +596,12 @@ DeepSleep時消費電流の前提値は再評価対象とする。
 - [ACTIVE] TP4056単体試験合格済み
 - [ACTIVE] ハンダ温度を280℃に修正済み（共晶ハンダ適正温度）
 - [ACTIVE] **AE-TPS63802電源基板通電試験合格（フェーズ1～7 PASS）**
-- [ACTIVE] **GPIO割り当て確定（EN=D6/GPIO43・ADC=D7/GPIO44）**
+- [ACTIVE] **GPIO割り当て確定（EN=D6/GPIO43・ADC=D3/GPIO4）**
+- [ACTIVE] **SPI_CS=D7/GPIO44、SPI_SCK=D8/GPIO7、SPI_MISO=D9/GPIO8、SPI_MOSI=D10/GPIO9**
 - [ACTIVE] **MCP23017採用確定（LED R/G/B制御・XIAO JTAGランド代替）**
-- [ACTIVE] **メイン基板サイズ95mm×72mmに確定**
-- [ACTIVE] **全配線2.54mmピッチ統一確定**
+- [ACTIVE] **メイン基板レイアウト案確定（EN維持用R_EN(100kΩ)配置済み）**
+- [ACTIVE] **DeepSleep対応設計確認済み（GPIO43 Hi-Z対策・microSD CS処理）**
+- [ACTIVE] **Encoder復帰EXT0/EXT1対応確認済み**
 - [IN PROGRESS] メイン基板実装作業
 - [CHECK] battery voltage monitor 未実装
 - [CHECK] MCP23017 実装・LED制御未確認

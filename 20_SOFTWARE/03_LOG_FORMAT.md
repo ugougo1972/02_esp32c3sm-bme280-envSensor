@@ -5,6 +5,8 @@
 本ファイルは、携帯型環境センサーロガーで記録するログデータの形式（CSVフォーマット）を定義するものである。  
 ログ形式は、後から Excel、Python、R 等で解析することを前提として設計する。
 
+---
+
 ## 基本方針
 
 - ログは **CSV形式** とする
@@ -15,7 +17,11 @@
 - `head_code` は `05_head.md` の定義に従う
 - 未入力と「症状なし」「屋内」などを混同しないため、既定値を明確にする
 - 初号機では、まず **安定して追記できること** を優先する
-- `vbat` は **TP4056 OUT+ / OUT- を対象にした分圧回路** の実装後に追加する
+- **`vbat` は D3(GPIO4)・ADC1_CH3 経由で取得（100kΩ×2分圧回路・メイン基板座標(13,03)～(13,06)）**✅ **確定**
+- **microSD CS は D7(GPIO44) 確定**✅
+- **DeepSleep対応設計確定**（CS=HIGH・SPI.end() 処理）✅
+
+---
 
 ## ログファイル基本仕様
 
@@ -24,10 +30,12 @@
 | ファイル形式 | CSV |
 | 文字コード | UTF-8 |
 | 改行コード | LF |
-| 保存媒体 | microSD |
+| 保存媒体 | microSD（**D7/GPIO44 CS確定**）✅ |
 | 保存方式 | 追記保存（append） |
 | 基本ファイル名 | `log_env.csv` |
 | ヘッダ行 | あり（新規作成時のみ） |
+
+---
 
 ## ファイル名運用
 
@@ -35,35 +43,39 @@
 
 | ファイル名 | 用途 | 状況 |
 |-----------|------|------|
-| `test.txt` | microSD単体確認 | 確認済み |
-| `log.csv` | 初期CSV確認 | 確認済み |
-| `log_env.csv` | 環境ログ基本形 | 確認済み |
-| `log_env_loop.csv` | periodic logger 用 | 確認済み |
-| `log_sleep_env.csv` | Deep Sleep logger 用 | 確認済み |
+| `test.txt` | microSD単体確認 | ✅ 確認済み |
+| `log.csv` | 初期CSV確認 | ✅ 確認済み |
+| `log_env.csv` | 環境ログ基本形 | ✅ 確認済み |
+| `log_env_loop.csv` | periodic logger 用 | ✅ 確認済み |
+| `log_sleep_env.csv` | Deep Sleep logger 用 | ✅ 確認済み |
+
+---
 
 ## CSV項目定義（推奨最新版）
 
-### 推奨列構成
+### 推奨列構成（確定版）✅
 
-| 列番号 | 項目名 | 内容 | 単位 / 型 | 備考 |
-|--------|--------|------|-----------|------|
-| 1 | date | 日付 | YYYY-MM-DD | RTC |
-| 2 | time | 時刻 | HH:MM:SS | RTC |
-| 3 | temp_c | 温度 | ℃ | BME280 |
-| 4 | hum_pct | 湿度 | % | BME280 |
-| 5 | press_hpa | 気圧 | hPa | BME280 |
-| 6 | als | 照度センサ値 | count | LTR390 |
-| 7 | uvs | UVセンサ値 | count | LTR390 |
-| 8 | context_code | 行動状態 | code | `04_ctx.md` 準拠 |
-| 9 | head_code | 頭痛状態 | code | `05_head.md` 準拠 |
-| 10 | vbat | 電池電圧 | V | 分圧回路で後段実装 |
+| 列番号 | 項目名 | 内容 | 単位 / 型 | 取得元 | 備考 |
+|--------|--------|------|-----------|--------|------|
+| 1 | date | 日付 | YYYY-MM-DD | DS3231(I2C 0x68) | RTC |
+| 2 | time | 時刻 | HH:MM:SS | DS3231(I2C 0x68) | RTC |
+| 3 | temp_c | 温度 | ℃ | BME280(I2C 0x76) | - |
+| 4 | hum_pct | 湿度 | % | BME280(I2C 0x76) | - |
+| 5 | press_hpa | 気圧 | hPa | BME280(I2C 0x76) | - |
+| 6 | als | 照度センサ値 | count | LTR390(I2C 0x53) | - |
+| 7 | uvs | UVセンサ値 | count | LTR390(I2C 0x53) | - |
+| 8 | context_code | 行動状態 | code | UI入力 | `04_ctx.md` 準拠 |
+| 9 | head_code | 頭痛状態 | code | UI入力 | `05_head.md` 準拠 |
+| 10 | **vbat** | **電池電圧** | **V** | **D3(GPIO4)・ADC1_CH3** ✅ | **100kΩ×2分圧・座標(13,03)～(13,06)** ✅ |
 
 ### 採用理由
 
 - `als` / `uvs` は、現時点の実測ログと整合しやすい
 - `context_code` は `04_ctx.md` の列名と意味に合わせる
 - `head_code` は `05_head.md` の定義を反映する
-- `vbat` は将来拡張列として末尾に置く
+- **`vbat` は D3(GPIO4)・ADC1_CH3 で取得確定**✅
+
+---
 
 ## CSVヘッダ
 
@@ -101,6 +113,8 @@ date,time,temp_c,hum_pct,press_hpa,als,uvs,context_code
 date,time,temp_c,hum_pct,press_hpa,als,uvs,context_code,head_code,vbat
 ```
 
+---
+
 ## CSV記録例
 
 ### 推奨最新版の記録例
@@ -111,10 +125,12 @@ date,time,temp_c,hum_pct,press_hpa,als,uvs,context_code,head_code,vbat
 2026-04-05,15:13:11,22.55,62.17,1006.26,563,0,0,0,0
 ```
 
-### `vbat` 実装後の想定例
+### `vbat` 実装後の想定例（D3/GPIO4・ADC1_CH3）✅
 
 ```text
 2026-04-20,07:00:00,22.10,61.20,1008.01,420,0,5,1,4.102
+2026-04-20,07:01:00,22.12,61.18,1008.02,418,0,5,1,4.098
+2026-04-20,07:02:00,22.14,61.16,1008.04,422,0,5,1,4.095
 ```
 
 ### 旧段階ログとの関係
@@ -127,6 +143,8 @@ date,time,temp_c,hum_pct,press_hpa,als,uvs,context_code,head_code,vbat
 ```
 
 ただし、**初号機の運用版では列順を固定する**。
+
+---
 
 ## `context_code` 定義
 
@@ -147,6 +165,8 @@ date,time,temp_c,hum_pct,press_hpa,als,uvs,context_code,head_code,vbat
 - 未入力時は **0**
 - 推測で自動設定しない
 
+---
+
 ## `head_code` 定義
 
 `head_code` は `05_head.md` を正とする。
@@ -166,19 +186,42 @@ date,time,temp_c,hum_pct,press_hpa,als,uvs,context_code,head_code,vbat
 - 未入力時は **0**
 - 推測で `1` を自動設定しない
 
-## `vbat` 定義
+---
+
+## `vbat` 定義（確定版）✅
 
 ### 基本方針
 
 - `vbat` は **システム側で実際に見ている電池系電圧** とする
-- 測定対象は **TP4056 `OUT+ / OUT-`**
-- XIAO ADC には **分圧後の電圧** を入力し、ソフト側で元電圧へ換算する
+- **測定対象：TP4056 `OUT+ / OUT-`** ✅
+- **ADC入力：XIAO D3(GPIO4)・ADC1_CH3** ✅ **確定**
+- **分圧回路：100kΩ + 100kΩ（1:1）** ✅ **確定**
+- **メイン基板配置：座標(13,03)～(13,06)** ✅
+- **ソフト側で分圧値×2して元電圧に換算** ✅
+
+### 回路前提（確定版）✅
+
+```text
+VBAT_SENSE_RAW (TP4056 OUT+) --[R1:100kΩ]--+-- D3(GPIO4)/ADC1_CH3
+                                            |
+                                          [R2:100kΩ]
+                                            |
+GND ----------------------------------------+-- XIAO GND
+```
+
+### 換算式
+
+```text
+vbat = analogReadMilliVolts(D3) / 1000.0 * 2.0
+```
 
 ### 既定値
 
 - 未実装時は **0**
 - 読取失敗時は **0** または異常値扱いを実装側で統一する
 - 推測値を入れない
+
+---
 
 ## 欠損データ・異常値の扱い
 
@@ -190,6 +233,7 @@ date,time,temp_c,hum_pct,press_hpa,als,uvs,context_code,head_code,vbat
 | 未実装項目 | 0 または列未採用 | 段階的実装を許容 |
 | RTC異常 | `2000-01-01,00:00:00` 等 | 無効データとして扱う |
 | lostPower直後 | 自動再設定前の無効時刻 | 解析時除外候補 |
+| **ADC読取失敗** | **0 または -1** ✅ | **D3(GPIO4)異常時** |
 
 ### 運用上の考え方
 
@@ -197,6 +241,8 @@ date,time,temp_c,hum_pct,press_hpa,als,uvs,context_code,head_code,vbat
 - `context_code = 0` は「unknown」
 - `head_code = 0` は「unknown」
 - `vbat = 0` は未実装または未取得として扱う
+
+---
 
 ## ログ周期
 
@@ -207,7 +253,9 @@ date,time,temp_c,hum_pct,press_hpa,als,uvs,context_code,head_code,vbat
 | OLED表示時間 | 約5秒 | 必要時のみ |
 | 残り時間 | Deep Sleep | 運用版想定 |
 
-## 保存処理ルール
+---
+
+## 保存処理ルール（DeepSleep対応確定版）✅
 
 | 項目 | 内容 |
 |------|------|
@@ -216,17 +264,33 @@ date,time,temp_c,hum_pct,press_hpa,als,uvs,context_code,head_code,vbat
 | ファイルあり | 追記 |
 | SDエラー | 再試行または異常表示 |
 | RTCエラー | 無効時刻扱いまたは復旧後記録 |
-| Deep Sleep復帰後 | 再初期化後に追記継続 |
+| **Deep Sleep前** | **microSD CS=HIGH・SPI.end() 実施（D7/GPIO44）** ✅ |
+| **Deep Sleep復帰後** | **再初期化後に追記継続** ✅ |
+| **GPIO43制御** | **電源遮断・復帰によりmicroSDも電源連動** ✅ |
 
-## microSD運用上の注意
+---
+
+## microSD運用上の注意（D7/GPIO44 CS確定版）✅
 
 - `SD.begin()` 失敗時は配線、CS、SPI初期化順を再確認する
 - 必要に応じて以下を用いる  
-  - CS High  
-  - `SPI.begin(...)`  
-  - `SD.begin(CS, SPI, 1000000)`
+  - **D7(GPIO44) CS High**✅
+  - `SPI.begin(...)`
+  - **`SD.begin(44, SPI, 1000000)`** ✅
+- **Deep Sleep前に CS=HIGH・SPI.end() 実施**✅ **必須**
 - Deep Sleep中の COM 切断は異常扱いしない
 - 成立判定は Serial より **CSV追記結果を優先** する
+
+### DeepSleep対応処理（必須）✅
+
+```cpp
+// Deep Sleep移行前
+pinMode(PIN_SPI_CS, OUTPUT);      // D7(GPIO44)
+digitalWrite(PIN_SPI_CS, HIGH);   // CS=HIGH固定
+SPI.end();                          // SPI終了
+```
+
+---
 
 ## ファイルサイズの目安
 
@@ -241,6 +305,8 @@ date,time,temp_c,hum_pct,press_hpa,als,uvs,context_code,head_code,vbat
 
 **microSD 8GB 以上で十分運用可能** と見込む。  
 ただし、これは概算であり、最終的な列数・文字数で増減する。
+
+---
 
 ## 実装上の注意
 
@@ -261,16 +327,26 @@ date,time,temp_c,hum_pct,press_hpa,als,uvs,context_code,head_code,vbat
 - `head_code` を環境値から推定しない
 - `vbat` 未実装時に仮の推定値を入れない
 
+### 4. vbat実装後の確認事項✅
+
+- **テスター実測値と `vbat` 値が概ね一致するか確認**
+- **誤差±5%以内を許容範囲とする**
+- 初回はテスター値との一致確認を優先する
+
+---
+
 ## 将来拡張候補
 
 | 項目 | 内容 | 状況 |
 |------|------|------|
-| `vbat` 実装 | ADC追加 | 実装予定 |
+| **`vbat` 実装** | **D3(GPIO4)・ADC1_CH3 経由でADC取得** ✅ | **🔄 メイン基板実装中** |
 | 頭痛状態記録 | `head_code` 列運用 | 追加予定 |
 | 気温変化率 | ソフト計算列 | 未実装 |
 | 気圧変化率 | ソフト計算列 | 未実装 |
 | ログローテーション | 日単位 / 月単位分割 | 未実装 |
 | エラーフラグ列 | 異常状態を別列管理 | 候補 |
+
+---
 
 ## ステータス
 
@@ -278,6 +354,10 @@ date,time,temp_c,hum_pct,press_hpa,als,uvs,context_code,head_code,vbat
 - [ACTIVE] `context_code` 定義を反映済み
 - [ACTIVE] `head_code` 定義を反映済み
 - [ACTIVE] `als` / `uvs` 列名を採用
-- [CHECK] `vbat` 列未実装
+- [COMPLETE] **`vbat`取得方法確定（D3/GPIO4・ADC1_CH3・100kΩ×2分圧）** ✅
+- [COMPLETE] **microSD CS確定（D7/GPIO44）** ✅
+- [COMPLETE] **DeepSleep対応設計確定（CS=HIGH・SPI.end()）** ✅
+- [COMPLETE] **電源基板通電試験全項目PASS（3.304V）により記録系基盤確保** ✅
+- [IN PROGRESS] **`vbat`列実装（メイン基板分圧回路実装中）** 🔄
 - [CHECK] 欠損値処理の最終実装は未確定
 - [CHECK] ファイルローテーション未実装
